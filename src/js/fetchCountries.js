@@ -1,12 +1,11 @@
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
-export async function fetchCountries(name) {
-  const url = `https://restcountries.com/v2/name/${name}?fields=name,capital,population,flags,languages`;
+export function fetchCountries(name) {
+    const URL = "https://restcountries.com/v3.1/name/"
 
-  const response = await fetch(url);
-  const countries = await response.json();
-
-  if (response.ok === false) {
-    throw new Error (Notify.failure('Oops, there is no country with that name'));
-  }
-  return countries;
+    return fetch(`${URL}${name}?fields=name,capital,population,flags,languages`)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(response.statusText);
+            }
+            return response.json();
+        })
 }

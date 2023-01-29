@@ -1,62 +1,50 @@
 import './css/styles.css';
-import { fetchCountries } from './js/fetchCountries';
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import { fetchCountries } from './js/fetchCountries'
+import debounce from 'lodash.debounce';
+import Notiflix from 'notiflix';
 
-const debounce = require('lodash.debounce');
 const DEBOUNCE_DELAY = 300;
+let markUp = ``;
 
-const inputField = document.getElementById('search-box');
-inputField.addEventListener('input', debounce(onGetRequest, DEBOUNCE_DELAY));
+const refs = {
+    input: document.querySelector('#search-box'),
+    ul: document.querySelector(`.country-list`)
+}
 
-const listCountry = document.querySelector('.country-list');
-const infoCountry = document.querySelector('.country-info');
 
-let name = '';
+refs.input.addEventListener('input', debounce(onInput, DEBOUNCE_DELAY))
 
-async function onGetRequest() {
-  name = inputField.value.trim();
+function onInput() {
+    refs.ul.innerHTML = ``;
 
-  if (inputField.value === '') {
-    listCountry.innerHTML = '';
-    infoCountry.innerHTML = '';
-    return;
-  }
+    const requestedCountry = refs.input.value.trim();
+    if (!requestedCountry ) {return}
+    fetchCountries(requestedCountry)
+        .then(data => {markUpCountries(data)})
+        .catch(error => Notiflix.Notify.failure('Oops, there is no country with that name'));
+    
+}
 
-  const countriesResponce = await fetchCountries(name);
-  listCountry.innerHTML = '';
-  infoCountry.innerHTML = '';
+function markUpCountries(arrayOfCountries) {
+    
+    if (arrayOfCountries.length > 10){ Notiflix.Notify.info('Too many matches found. Please enter a more specific name.')}
+    else if (arrayOfCountries.length === 1) {return markUpOneCountry(arrayOfCountries)} 
+    else if (arrayOfCountries.length > 1 && arrayOfCountries.length < 11) {return markUpCountryList(arrayOfCountries)} 
+    
+} 
 
-  try {
-  if (countriesResponce.length > 10) {
-    Notify.info('Too many matches found. Please enter a more specific name.');
-  }
+function markUpOneCountry(arrayWithOneCountry) {
+    markUp = arrayWithOneCountry.map(({ capital, flags, languages, name, population}) => `<li><div class="wrapper">
+        <img src="${flags.svg}" alt="Country flag" width="40" height='40' /><h1>${name.official}</h1></div>
+        <p><b>Capital:</b> ${capital}</p>
+        <p><b>Population:</b> ${population}</p>
+        <p><b>Languages:</b> ${Object.values(languages)}</p></li>`).join(``)
+        return refs.ul.innerHTML = markUp;
+};
 
-  if (countriesResponce.length >= 2 && countriesResponce.length <= 10) {
-    const listCountriesMarkup = countriesResponce
-      .map(country => {
-        return `<li>
-            <img src='${country.flags.svg}' alt='Flag' width="80" height="40" />
-          <p>${country.name}</p>
-          </li>`;
-      })
-      .join('');}
-
-    listCountry.insertAdjacentHTML('beforeend', listCountriesMarkup);
-  }
-catch(e){
-  if (countriesResponce.length === 1) {
-    const countryMarkup = countriesResponce.map(country => {
-      return `<img src='${
-        country.flags.svg
-      }' alt='Flag' width="100" heigth"50" />
-          <h2>${country.name}</h2>
-          <p><span>Capital:</span>${country.capital}</p> 
-          <p><span>Population:</span>${country.population}</p> 
-          <p><span>Laguages:</span>${country.languages.map(
-            name => name.name
-          )}</p> `;
-    });
-
-    infoCountry.insertAdjacentHTML('beforeend', countryMarkup);
-  }
-} }
+function markUpCountryList(arrayOfCountries) {
+    markUp = arrayOfCountries.map(({ flags, name}) => `<li class="country__item"><div class="wrapper wrapper--margin">
+        <img src="${flags.svg}" alt="Country flag" width="20" height='20' />
+        <span>${name.official}</span></div></li>`).join(``)
+        return refs.ul.innerHTML = markUp;
+}
